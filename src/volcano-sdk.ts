@@ -37,6 +37,7 @@ export type { VertexStudioConfig, VertexStudioOptions } from "./llms/vertex-stud
 export type { AzureConfig, AzureOptions } from "./llms/azure.js";
 import type { LLMHandle, ToolDefinition, LLMToolResult } from "./llms/types.js";
 import { validateToolArgs, __internal_validateToolArgs } from "./validation.js";
+import { sleep, withTimeout } from "./agent/utils.js";
 
 /* ---------- LLM ---------- */
 export type { LLMHandle, ToolDefinition, LLMToolResult };
@@ -373,17 +374,7 @@ async function executeWithAuth<T>(auth: MCPAuthConfig, endpoint: string, fn: () 
   }
 }
 
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number, label = 'Step'): Promise<T> {
-  let timer: any;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-}
+// sleep and withTimeout moved to agent/utils.ts
 
 // Tool discovery cache for automatic selection
 const TOOL_CACHE = new Map<string, { tools: ToolDefinition[]; ts: number }>();
