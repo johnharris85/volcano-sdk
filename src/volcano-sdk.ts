@@ -39,6 +39,12 @@ import type { LLMHandle, ToolDefinition, LLMToolResult } from "./llms/types.js";
 import type { MCPAuthConfig, MCPHandle } from "./mcp/types.js";
 import { validateToolArgs, __internal_validateToolArgs } from "./validation.js";
 import { sleep, withTimeout } from "./agent/utils.js";
+import {
+  getOAuthToken,
+  executeWithAuth,
+  __internal_clearOAuthTokenCache,
+  __internal_getOAuthTokenCache
+} from "./mcp/auth.js";
 
 /* ---------- LLM ---------- */
 export type { LLMHandle, ToolDefinition, LLMToolResult };
@@ -120,57 +126,6 @@ type MCPPoolEntry = {
 const MCP_POOL = new Map<string, MCPPoolEntry>();
 let MCP_POOL_MAX = 16;
 let MCP_POOL_IDLE_MS = 30_000;
-
-// OAuth token cache: endpoint -> { token, expiresAt }
-type TokenCacheEntry = { token: string; expiresAt: number };
-const OAUTH_TOKEN_CACHE = new Map<string, TokenCacheEntry>();
-
-async function getOAuthToken(auth: MCPAuthConfig, endpoint: string): Promise<string> {
-  // Check cache first
-  const cached = OAUTH_TOKEN_CACHE.get(endpoint);
-  if (cached && cached.expiresAt > Date.now() + 60000) { // 60s buffer before expiration
-    return cached.token;
-  }
-  
-  // Acquire new token
-  if (!auth.tokenEndpoint || !auth.clientId || !auth.clientSecret) {
-    throw new Error(`OAuth auth requires tokenEndpoint, clientId, and clientSecret`);
-  }
-  
-  // OAuth 2.0 RFC 6749 requires application/x-www-form-urlencoded for token requests
-  const params = new URLSearchParams({
-    grant_type: 'client_credentials',
-    client_id: auth.clientId,
-    client_secret: auth.clientSecret
-  });
-  
-  // Add scope if provided (some OAuth servers require it)
-  if (auth.scope) {
-    params.set('scope', auth.scope);
-  }
-  
-  const response = await fetch(auth.tokenEndpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString()
-  });
-  
-  if (!response.ok) {
-    throw new Error(`OAuth token acquisition failed: ${response.status} ${await response.text()}`);
-  }
-  
-  const data = await response.json();
-  const token = data.access_token;
-  const expiresIn = data.expires_in || 3600; // default 1 hour
-  
-  // Cache the token
-  OAUTH_TOKEN_CACHE.set(endpoint, {
-    token,
-    expiresAt: Date.now() + (expiresIn * 1000)
-  });
-  
-  return token;
-}
 
 
 async function getPooledClient(url: string, auth?: MCPAuthConfig): Promise<MCPPoolEntry> {
@@ -277,14 +232,8 @@ export function __internal_getMcpPoolStats() {
 }
 export async function __internal_forcePoolCleanup() { await cleanupIdlePool(); }
 export function __internal_setPoolConfig(max: number, idleMs: number) { MCP_POOL_MAX = max; MCP_POOL_IDLE_MS = idleMs; }
-export function __internal_clearOAuthTokenCache() { OAUTH_TOKEN_CACHE.clear(); }
-export function __internal_getOAuthTokenCache() { 
-  return Array.from(OAUTH_TOKEN_CACHE.entries()).map(([endpoint, entry]) => ({ 
-    endpoint, 
-    token: entry.token, 
-    expiresAt: entry.expiresAt 
-  })); 
-}
+// OAuth cache helpers re-exported from auth module
+export { __internal_clearOAuthTokenCache, __internal_getOAuthTokenCache } from "./mcp/auth.js";
 
 async function withMCP<T>(h: MCPHandle, fn: (c: MCPClient) => Promise<T>, telemetry?: any, operation?: string): Promise<T> {
   ensurePoolSweeper();
@@ -321,45 +270,7 @@ async function withMCP<T>(h: MCPHandle, fn: (c: MCPClient) => Promise<T>, teleme
   }
 }
 
-async function executeWithAuth<T>(auth: MCPAuthConfig, endpoint: string, fn: () => Promise<T>): Promise<T> {
-  // Get auth headers
-  const authHeaders: Record<string, string> = {};
-  
-  if (auth.type === 'oauth') {
-    const token = await getOAuthToken(auth, endpoint);
-    authHeaders['Authorization'] = `Bearer ${token}`;
-  } else if (auth.type === 'bearer' && auth.token) {
-    authHeaders['Authorization'] = `Bearer ${auth.token}`;
-  }
-  
-  // Wrap fetch
-  const originalFetch = global.fetch;
-  global.fetch = async (url: any, init: any = {}) => {
-    let mergedHeaders: any = {};
-    if (init.headers) {
-      if (init.headers instanceof Headers) {
-        init.headers.forEach((value: string, key: string) => {
-          mergedHeaders[key] = value;
-        });
-      } else {
-        mergedHeaders = { ...init.headers };
-      }
-    }
-    Object.assign(mergedHeaders, authHeaders);
-    
-    return originalFetch(url, {
-      ...init,
-      headers: mergedHeaders
-    });
-  };
-  
-  try {
-    return await fn();
-  } finally {
-    global.fetch = originalFetch;
-  }
-}
-
+// executeWithAuth, getOAuthToken moved to mcp/auth.ts
 // sleep and withTimeout moved to agent/utils.ts
 
 // Tool discovery cache for automatic selection
