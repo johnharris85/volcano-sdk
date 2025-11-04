@@ -36,7 +36,7 @@ export type { BedrockConfig, BedrockOptions } from "./llms/bedrock.js";
 export type { VertexStudioConfig, VertexStudioOptions } from "./llms/vertex-studio.js";
 export type { AzureConfig, AzureOptions } from "./llms/azure.js";
 import type { LLMHandle, ToolDefinition, LLMToolResult } from "./llms/types.js";
-import Ajv from "ajv";
+import { validateToolArgs, __internal_validateToolArgs } from "./validation.js";
 
 /* ---------- LLM ---------- */
 export type { LLMHandle, ToolDefinition, LLMToolResult };
@@ -119,23 +119,8 @@ export function mcp(url: string, options?: { auth?: MCPAuthConfig }): MCPHandle 
   };
 }
 
-// Ajv validator instance
-const ajv = new Ajv({ allErrors: true, strict: false });
-const VALIDATOR_CACHE = new WeakMap<object, any>();
-function validateWithSchema(schema: any | undefined, args: any, context: string) {
-  if (!schema || typeof schema !== 'object') return; // nothing to validate
-  let validate = VALIDATOR_CACHE.get(schema);
-  if (!validate) {
-    validate = ajv.compile(schema as any);
-    VALIDATOR_CACHE.set(schema, validate);
-  }
-  const ok = validate(args);
-  if (!ok) {
-    const msg = (validate.errors || []).map((e: any) => `${e.instancePath || e.schemaPath}: ${e.message}`).join('; ');
-    throw new Error(`${context} arguments failed schema validation: ${msg}`);
-  }
-}
-export function __internal_validateToolArgs(schema: any, args: any) { validateWithSchema(schema, args, 'test'); }
+// Re-export validation for backwards compatibility
+export { __internal_validateToolArgs };
 
 type MCPPoolEntry = {
   client: MCPClient;
@@ -1339,7 +1324,7 @@ export function agent(opts?: AgentOptions): AgentBuilder {
                     // Apply agent-level auth
                     handle = applyAgentAuth(handle);
                     // Validate args when schema known
-                    try { validateWithSchema((availableTools.find(t => t.name === mapped.name) as any)?.parameters, mapped.arguments, `Tool ${mapped.name}`); } catch (e) { throw e; }
+                    try { validateToolArgs((availableTools.find(t => t.name === mapped.name) as any)?.parameters, mapped.arguments, `Tool ${mapped.name}`); } catch (e) { throw e; }
                     const idx = mapped.name.indexOf('.');
                     const actualToolName = idx >= 0 ? mapped.name.slice(idx + 1) : mapped.name;
                     const mcpStart = Date.now();
@@ -1636,7 +1621,7 @@ export function agent(opts?: AgentOptions): AgentBuilder {
               }
               // Validate against tool schema if discoverable
               const schema = await getToolSchema(mcpHandle, (s as any).tool);
-              validateWithSchema(schema, (s as any).args ?? {}, `Tool ${mcpHandle.id}.${(s as any).tool}`);
+              validateToolArgs(schema, (s as any).args ?? {}, `Tool ${mcpHandle.id}.${(s as any).tool}`);
               const mcpStart = Date.now();
               let res: any;
               try {
@@ -2035,7 +2020,7 @@ export function agent(opts?: AgentOptions): AgentBuilder {
                     // Apply agent-level auth
                     handle = applyAgentAuth(handle);
                     // Validate args when schema known
-                    try { validateWithSchema((availableTools.find(t => t.name === mapped.name) as any)?.parameters, mapped.arguments, `Tool ${mapped.name}`); } catch (e) { throw e; }
+                    try { validateToolArgs((availableTools.find(t => t.name === mapped.name) as any)?.parameters, mapped.arguments, `Tool ${mapped.name}`); } catch (e) { throw e; }
                     const idx = mapped.name.indexOf('.');
                     const actualToolName = idx >= 0 ? mapped.name.slice(idx + 1) : mapped.name;
                     const mcpStart = Date.now();
@@ -2301,7 +2286,7 @@ export function agent(opts?: AgentOptions): AgentBuilder {
               }
               // Validate against tool schema if discoverable
               const schema = await getToolSchema(mcpHandle, (s as any).tool);
-              validateWithSchema(schema, (s as any).args ?? {}, `Tool ${mcpHandle.id}.${(s as any).tool}`);
+              validateToolArgs(schema, (s as any).args ?? {}, `Tool ${mcpHandle.id}.${(s as any).tool}`);
               const mcpStart = Date.now();
               let res: any;
               try {
