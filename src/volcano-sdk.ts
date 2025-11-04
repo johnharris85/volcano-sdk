@@ -51,6 +51,13 @@ import {
   __internal_forcePoolCleanup,
   __internal_setPoolConfig
 } from "./mcp/client.js";
+import {
+  discoverTools,
+  getToolSchema,
+  __internal_clearDiscoveryCache,
+  __internal_setDiscoveryTtl,
+  __internal_primeDiscoveryCache
+} from "./mcp/discovery.js";
 
 /* ---------- LLM ---------- */
 export type { LLMHandle, ToolDefinition, LLMToolResult };
@@ -128,99 +135,13 @@ export { __internal_clearOAuthTokenCache, __internal_getOAuthTokenCache } from "
 
 // Connection pooling (getPooledClient, connectWithAuth, cleanupIdlePool, ensurePoolSweeper, withMCP) moved to mcp/client.ts
 // executeWithAuth, getOAuthToken moved to mcp/auth.ts
+// Tool discovery (discoverTools, getToolSchema) moved to mcp/discovery.ts
 // sleep and withTimeout moved to agent/utils.ts
 
-// Tool discovery cache for automatic selection
-const TOOL_CACHE = new Map<string, { tools: ToolDefinition[]; ts: number }>();
-let TOOL_CACHE_TTL_MS = 60_000;
-
-/**
- * Discover all available tools from one or more MCP servers.
- * Results are cached for 60 seconds to improve performance.
- * 
- * @param handles - Array of MCP handles to query for tools
- * @returns Combined array of all available tools from all servers
- * 
- * @example
- * const weather = mcp("http://localhost:3000/mcp");
- * const calendar = mcp("http://localhost:4000/mcp");
- * const tools = await discoverTools([weather, calendar]);
- * console.log(tools.map(t => t.name)); // ["get_forecast", "create_event", ...]
- */
-export async function discoverTools(handles: MCPHandle[]): Promise<ToolDefinition[]> {
-  const allTools: ToolDefinition[] = [];
-  
-  for (const handle of handles) {
-    try {
-      const cached = TOOL_CACHE.get(handle.url);
-      if (cached && (Date.now() - cached.ts) < TOOL_CACHE_TTL_MS) {
-        // reuse cached with endpoint-specific names
-        allTools.push(...cached.tools);
-        continue;
-      }
-      const tools = await withMCP(handle, async (client) => {
-        const result = await client.listTools();
-        const mapped = result.tools.map(tool => ({
-          name: `${handle.id}.${tool.name}`,
-          description: tool.description || `Tool: ${tool.name}`,
-          parameters: tool.inputSchema || { type: "object", properties: {} },
-          mcpHandle: handle,
-        }));
-        TOOL_CACHE.set(handle.url, { tools: mapped, ts: Date.now() });
-        return mapped;
-      });
-      allTools.push(...tools);
-    } catch (error) {
-      // Invalidate cache on failure
-      TOOL_CACHE.delete(handle.url);
-      // Fail fast - throw connection error
-      throw normalizeError(error, 'mcp-conn', { 
-        provider: classifyProviderFromMcp(handle),
-        retryable: true  // Connection errors are retryable
-      });
-    }
-  }
-  
-  return allTools;
-}
-
-export function __internal_clearDiscoveryCache() { TOOL_CACHE.clear(); }
-export function __internal_setDiscoveryTtl(ms: number) { TOOL_CACHE_TTL_MS = ms; }
-export function __internal_primeDiscoveryCache(handle: MCPHandle, rawTools: Array<{ name: string; inputSchema?: any; description?: string }>) {
-  const tools: ToolDefinition[] = rawTools.map(t => ({
-    name: `${handle.id}.${t.name}`,
-    description: t.description || `Tool: ${t.name}`,
-    parameters: t.inputSchema || { type: 'object', properties: {} },
-    mcpHandle: handle,
-  }));
-  TOOL_CACHE.set(handle.url, { tools, ts: Date.now() });
-}
-
-// helper to fetch tool schema for explicit calls
-async function getToolSchema(handle: MCPHandle, toolName: string): Promise<any | undefined> {
-  const cached = TOOL_CACHE.get(handle.url);
-  if (cached) {
-    const found = cached.tools.find(t => t.name === `${handle.id}.${toolName}`);
-    return found?.parameters as any;
-  }
-  try {
-    const tools = await withMCP(handle, async (client) => {
-      const result = await client.listTools();
-      const mapped = result.tools.map(tool => ({
-        name: `${handle.id}.${tool.name}`,
-        description: tool.description || `Tool: ${tool.name}`,
-        parameters: tool.inputSchema || { type: 'object', properties: {} },
-        mcpHandle: handle,
-      }));
-      TOOL_CACHE.set(handle.url, { tools: mapped, ts: Date.now() });
-      return mapped;
-    });
-    const found = tools.find(t => t.name === `${handle.id}.${toolName}`);
-    return found?.parameters as any;
-  } catch {
-    return undefined;
-  }
-}
+// Re-export discoverTools for public API
+export { discoverTools } from "./mcp/discovery.js";
+// Re-export discovery test helpers
+export { __internal_clearDiscoveryCache, __internal_setDiscoveryTtl, __internal_primeDiscoveryCache } from "./mcp/discovery.js";
 
 /* ---------- Agent chain ---------- */
 export type RetryConfig = {
