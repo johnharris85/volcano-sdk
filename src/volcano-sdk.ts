@@ -36,6 +36,7 @@ export type { BedrockConfig, BedrockOptions } from "./llms/bedrock.js";
 export type { VertexStudioConfig, VertexStudioOptions } from "./llms/vertex-studio.js";
 export type { AzureConfig, AzureOptions } from "./llms/azure.js";
 import type { LLMHandle, ToolDefinition, LLMToolResult } from "./llms/types.js";
+import type { MCPAuthConfig, MCPHandle } from "./mcp/types.js";
 import { validateToolArgs, __internal_validateToolArgs } from "./validation.js";
 import { sleep, withTimeout } from "./agent/utils.js";
 
@@ -59,22 +60,7 @@ export {
 };
 
 /* ---------- MCP (Streamable HTTP) ---------- */
-export type MCPAuthConfig = {
-  type: 'oauth' | 'bearer';
-  token?: string;           // For bearer auth: direct token
-  clientId?: string;        // For OAuth: client credentials
-  clientSecret?: string;
-  tokenEndpoint?: string;   // OAuth token endpoint (for OAuth)
-  scope?: string;           // OAuth scope (optional, some servers require it)
-};
-
-export type MCPHandle = { 
-  listTools: () => Promise<{ tools: Array<{ name: string; description?: string; inputSchema?: any }> }>;
-  callTool: (name: string, args: Record<string, any>) => Promise<any>;
-  id: string; 
-  url: string; 
-  auth?: MCPAuthConfig;
-};
+export type { MCPAuthConfig, MCPHandle };
 
 /**
  * Connect to an MCP (Model Context Protocol) server via HTTP.
