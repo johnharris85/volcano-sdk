@@ -9,7 +9,7 @@ import {
   agent,
   __internal_getMcpPoolStats,
   __internal_setPoolConfig,
-} from '../../dist/volcano-sdk.js';
+} from '../../dist/index.js';
 
 function waitForOutput(proc: ChildProcess, match: RegExp, timeoutMs = 10000) {
   return new Promise<void>((resolve, reject) => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { llmOpenAI, llmAnthropic, llmAzure, llmBedrock, llmLlama, llmMistral, llmVertexStudio } from '../../dist/volcano-sdk.js';
+import { llmOpenAI, llmAnthropic, llmAzure, llmBedrock, llmLlama, llmMistral, llmVertexStudio } from '../../dist/index.js';
 
 describe('LLM Provider Options (E2E)', () => {
   it('OpenAI: uses optional parameters correctly', async () => {

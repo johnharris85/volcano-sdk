@@ -9,7 +9,7 @@ import {
   __internal_validateToolArgs,
   __internal_primeDiscoveryCache,
   ValidationError,
-} from '../../dist/volcano-sdk.js';
+} from '../../dist/index.js';
 
 describe('JSON Schema Validation', () => {
   describe('__internal_validateToolArgs (direct validation)', () => {

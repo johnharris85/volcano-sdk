@@ -11,7 +11,7 @@ import {
   agent,
   __internal_clearOAuthTokenCache,
   __internal_getOAuthTokenCache,
-} from '../../dist/volcano-sdk.js';
+} from '../../dist/index.js';
 
 function waitForOutput(proc: ChildProcess, match: RegExp, timeoutMs = 10000) {
   return new Promise<void>((resolve, reject) => {

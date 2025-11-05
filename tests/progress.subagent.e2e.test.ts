@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { agent, llmOpenAI } from '../src/volcano-sdk.js';
+import { agent, llmOpenAI } from '../src/index.js';
 
 describe('Sub-agent progress (e2e)', () => {
   it('shows correct step numbering for sub-agents (Step 2/3, Step 3/3)', { timeout: 30000 }, async () => {

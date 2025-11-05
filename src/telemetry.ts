@@ -2,7 +2,7 @@
 // Opt-in observability with traces and metrics
 
 import { createRequire } from 'node:module';
-import type { StepResult, LLMHandle, MCPHandle } from './volcano-sdk.js';
+import type { StepResult, LLMHandle, MCPHandle } from './index.js';
 
 // Type-only imports - actual OTEL imports are dynamic
 type Tracer = any;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { agent } from '../dist/volcano-sdk.js';
+import { agent } from '../dist/index.js';
 
 const createMockLLM = (responses: string[]) => {
   let callCount = 0;

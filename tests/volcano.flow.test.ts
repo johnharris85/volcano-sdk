@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { describe, it, beforeAll, afterAll, expect } from 'vitest';
-import { agent, mcp, llmOpenAI, llmAnthropic, llmMistral, llmLlama, llmBedrock, llmVertexStudio, llmAzure } from '../dist/volcano-sdk.js';
+import { agent, mcp, llmOpenAI, llmAnthropic, llmMistral, llmLlama, llmBedrock, llmVertexStudio, llmAzure } from '../dist/index.js';
 
 function waitForOutput(proc: any, match: RegExp, timeoutMs = 15000) {
   return new Promise<void>((resolve, reject) => {

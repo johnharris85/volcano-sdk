@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { agent, type TokenMetadata } from '../src/volcano-sdk.js';
+import { agent, type TokenMetadata } from '../src/index.js';
 import type { LLMHandle } from '../src/llms/types.js';
 
 describe('Token-level streaming', () => {

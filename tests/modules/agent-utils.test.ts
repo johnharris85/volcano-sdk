@@ -3,7 +3,7 @@
  * These tests verify utility functions like sleep and withTimeout
  */
 import { describe, it, expect } from 'vitest';
-import { agent, TimeoutError } from '../../dist/volcano-sdk.js';
+import { agent, TimeoutError } from '../../dist/index.js';
 
 describe('Agent Utility Functions', () => {
   describe('Timeout Handling (withTimeout)', () => {

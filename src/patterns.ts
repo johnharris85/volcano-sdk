@@ -1,5 +1,5 @@
 // Advanced workflow pattern implementations for agent()
-import type { StepResult, AgentBuilder } from "./volcano-sdk.js";
+import type { StepResult, AgentBuilder } from "./index.js";
 
 export async function executeParallel(
   stepsOrDict: any[] | Record<string, any>,

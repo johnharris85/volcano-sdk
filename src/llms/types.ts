@@ -2,7 +2,7 @@ export type ToolDefinition = {
   name: string;
   description: string;
   parameters: Record<string, any>;
-  mcpHandle?: import("../volcano-sdk").MCPHandle;
+  mcpHandle?: import("../index").MCPHandle;
 };
 
 export type TokenUsage = {
@@ -16,7 +16,7 @@ export type LLMToolResult = {
   toolCalls: Array<{
     name: string; // dotted name: <handleId>.<toolName>
     arguments: Record<string, any>;
-    mcpHandle?: import("../volcano-sdk").MCPHandle;
+    mcpHandle?: import("../index").MCPHandle;
   }>;
   usage?: TokenUsage;
 };

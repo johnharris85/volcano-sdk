@@ -15,7 +15,7 @@ import {
   MCPToolError,
   agent,
   mcp,
-} from '../../dist/volcano-sdk.js';
+} from '../../dist/index.js';
 
 describe('Error Classes', () => {
   describe('VolcanoError', () => {

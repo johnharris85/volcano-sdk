@@ -15,12 +15,12 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/volcano-sdk.d.ts",
-      "import": "./dist/volcano-sdk.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
-  "main": "./dist/volcano-sdk.js",
-  "types": "./dist/volcano-sdk.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist",
     "LICENSE",

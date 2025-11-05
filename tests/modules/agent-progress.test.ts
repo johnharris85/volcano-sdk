@@ -3,7 +3,7 @@
  * These tests verify progress rendering and hideProgress functionality
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { agent } from '../../dist/volcano-sdk.js';
+import { agent } from '../../dist/index.js';
 
 describe('Agent Progress Rendering', () => {
   let consoleOutput: string[] = [];

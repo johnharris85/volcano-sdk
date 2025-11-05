@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { agent, llmOpenAI } from '../src/volcano-sdk.js';
+import { agent, llmOpenAI } from '../src/index.js';
 
 describe('Progress output e2e (live APIs)', () => {
   it('validates default progress works for basic LLM steps', async () => {

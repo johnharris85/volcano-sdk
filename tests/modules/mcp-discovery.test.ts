@@ -10,7 +10,7 @@ import {
   __internal_clearDiscoveryCache,
   __internal_setDiscoveryTtl,
   __internal_primeDiscoveryCache,
-} from '../../dist/volcano-sdk.js';
+} from '../../dist/index.js';
 
 function waitForOutput(proc: ChildProcess, match: RegExp, timeoutMs = 10000) {
   return new Promise<void>((resolve, reject) => {

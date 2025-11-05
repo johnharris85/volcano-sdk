@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { agent, llmOpenAI, llmVertexStudio } from '../dist/volcano-sdk.js';
+import { agent, llmOpenAI, llmVertexStudio } from '../dist/index.js';
 
 describe('agent streaming (live APIs)', () => {
   it('streams OpenAI workflow results in real-time', async () => {

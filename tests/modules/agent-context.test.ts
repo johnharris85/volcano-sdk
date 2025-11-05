@@ -3,7 +3,7 @@
  * These tests verify history context building (buildHistoryContextChunked)
  */
 import { describe, it, expect } from 'vitest';
-import { agent } from '../../dist/volcano-sdk.js';
+import { agent } from '../../dist/index.js';
 
 describe('Agent Context Building', () => {
   function makeLLM(responses: string[] = ['OK']) {
