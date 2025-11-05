@@ -71,6 +71,7 @@ import { buildHistoryContextChunked } from "./agent/context.js";
 import { createProgressHandler } from "./agent/progress.js";
 import { buildAgentContext, parseAgentDecision } from "./agent/crews.js";
 import { executeLLMWithStreaming } from "./agent/streaming.js";
+import { aggregateStepMetrics } from "./agent/executor-utils.js";
 
 /* ---------- LLM ---------- */
 export type { LLMHandle, ToolDefinition, LLMToolResult };
@@ -964,20 +965,8 @@ export function agent(opts?: AgentOptions): AgentBuilder {
         throw error;
       } finally {
         if (progress) {
-          // Calculate totals for workflow end
-          const totalTokens = out.reduce((acc, s) => {
-            const stepTokens = (s as any).__tokenCount || (s as any).__crewTotalTokens || 0;
-            return acc + stepTokens;
-          }, 0);
-          const modelsUsed = new Set<string>();
-          out.forEach(s => {
-            const provider = (s as any).__provider;
-            const crewModels = (s as any).__crewModels;
-            if (provider) modelsUsed.add(provider);
-            if (crewModels) crewModels.forEach((m: string) => modelsUsed.add(m));
-          });
-          const totalDuration = out.reduce((acc, s) => acc + (s.durationMs || 0), 0);
-          progress.workflowEnd(steps.length, totalTokens, totalDuration, Array.from(modelsUsed));
+          const { totalTokens, modelsUsed, totalDuration } = aggregateStepMetrics(out);
+          progress.workflowEnd(steps.length, totalTokens, totalDuration, modelsUsed);
         }
         isRunning = false;
       }
@@ -1602,20 +1591,8 @@ export function agent(opts?: AgentOptions): AgentBuilder {
         // Note: We don't populate aggregated totals for streaming since it's incremental
       } finally {
         if (progress) {
-          // Calculate totals for workflow end
-          const totalTokens = out.reduce((acc, s) => {
-            const stepTokens = (s as any).__tokenCount || (s as any).__crewTotalTokens || 0;
-            return acc + stepTokens;
-          }, 0);
-          const modelsUsed = new Set<string>();
-          out.forEach(s => {
-            const provider = (s as any).__provider;
-            const crewModels = (s as any).__crewModels;
-            if (provider) modelsUsed.add(provider);
-            if (crewModels) crewModels.forEach((m: string) => modelsUsed.add(m));
-          });
-          const totalDuration = out.reduce((acc, s) => acc + (s.durationMs || 0), 0);
-          progress.workflowEnd(steps.length, totalTokens, totalDuration, Array.from(modelsUsed));
+          const { totalTokens, modelsUsed, totalDuration } = aggregateStepMetrics(out);
+          progress.workflowEnd(steps.length, totalTokens, totalDuration, modelsUsed);
         }
         isRunning = false;
       }
