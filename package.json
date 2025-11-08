@@ -15,12 +15,12 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/volcano-sdk.d.ts",
+      "import": "./dist/volcano-sdk.js"
     }
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/volcano-sdk.js",
+  "types": "./dist/volcano-sdk.d.ts",
   "files": [
     "dist",
     "LICENSE",
@@ -34,6 +34,7 @@
     "build": "tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "prepublishOnly": "npm run clean && npm run build",
+    "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "pretest": "./scripts/kill-test-servers.sh",
