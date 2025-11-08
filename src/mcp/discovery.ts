@@ -5,10 +5,11 @@ import type { MCPHandle } from "./types.js";
 import { withMCP } from "./client.js";
 import type { ToolDefinition } from "../llms/types.js";
 import { normalizeError, classifyProviderFromMcp } from "../errors.js";
+import * as CONSTANTS from "../constants.js";
 
 // Tool discovery cache for automatic selection
 const TOOL_CACHE = new Map<string, { tools: ToolDefinition[]; ts: number }>();
-let TOOL_CACHE_TTL_MS = 60_000;
+let TOOL_CACHE_TTL_MS = CONSTANTS.DEFAULT_TOOL_CACHE_TTL_MS;
 
 /**
  * Discover all available tools from one or more MCP servers.

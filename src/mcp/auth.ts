@@ -2,6 +2,7 @@
 // OAuth and Bearer token authentication for MCP
 
 import type { MCPAuthConfig } from "./types.js";
+import * as CONSTANTS from "../constants.js";
 
 type TokenCacheEntry = { token: string; expiresAt: number };
 const OAUTH_TOKEN_CACHE = new Map<string, TokenCacheEntry>();
@@ -9,7 +10,7 @@ const OAUTH_TOKEN_CACHE = new Map<string, TokenCacheEntry>();
 export async function getOAuthToken(auth: MCPAuthConfig, endpoint: string): Promise<string> {
   // Check cache first
   const cached = OAUTH_TOKEN_CACHE.get(endpoint);
-  if (cached && cached.expiresAt > Date.now() + 60000) { // 60s buffer before expiration
+  if (cached && cached.expiresAt > Date.now() + CONSTANTS.OAUTH_TOKEN_EXPIRY_BUFFER_MS) {
     return cached.token;
   }
 

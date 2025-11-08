@@ -34,8 +34,8 @@ export function isRetryableStatus(status?: number): boolean {
 
 export function classifyProviderFromLlm(usedLlm?: any): string | undefined {
   if (!usedLlm) return undefined;
-  if ((usedLlm as any).id) return `llm:${(usedLlm as any).id}`;
-  return `llm:${usedLlm.model}`;
+  const { getLLMProviderId } = require('./token-utils.js');
+  return `llm:${getLLMProviderId(usedLlm)}`;
 }
 
 export function classifyProviderFromMcp(handle?: any): string | undefined {

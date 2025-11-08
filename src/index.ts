@@ -19,6 +19,8 @@ import {
   classifyProviderFromLlm,
   classifyProviderFromMcp,
 } from "./errors.js";
+import { recordTokenMetrics, getLLMProviderId } from "./token-utils.js";
+import * as CONSTANTS from "./constants.js";
 export { llmAnthropic } from "./llms/anthropic.js";
 export { llmLlama } from "./llms/llama.js";
 export { llmMistral } from "./llms/mistral.js";
@@ -154,6 +156,15 @@ type AgentOptions = {
   maxToolIterations?: number;
 };
 
+function safeExecuteHook(hook: (() => void) | undefined, hookName: string): void {
+  if (!hook) return;
+  try {
+    hook();
+  } catch (e) {
+    console.warn(`${hookName} hook failed:`, e);
+  }
+}
+
 /**
  * Create an AI agent that chains LLM reasoning with MCP tool calls.
  * 
@@ -180,18 +191,18 @@ export function agent(opts?: AgentOptions): AgentBuilder {
   const steps: Array<Step | StepFactory | { __reset: true }> = [];
   const defaultLlm = opts?.llm;
   let contextHistory: StepResult[] = [];
-  let inheritedParentContext = false; // Track if we've inherited parent context
+  let inheritedParentContext = false;
   const globalInstructions = opts?.instructions;
   const agentName = opts?.name;
   const agentDescription = opts?.description;
-  const showProgress = !opts?.hideProgress; // Progress enabled by default
-  const defaultTimeoutMs = ((typeof opts?.timeout === 'number' ? opts!.timeout! : 60)) * 1000; // seconds -> ms
-  const defaultRetry: RetryConfig = opts?.retry ?? { delay: 0, retries: 3 };
-  const contextMaxChars = typeof opts?.contextMaxChars === 'number' ? opts!.contextMaxChars! : 20480;
-  const contextMaxToolResults = typeof opts?.contextMaxToolResults === 'number' ? opts!.contextMaxToolResults! : 8;
+  const showProgress = !opts?.hideProgress;
+  const defaultTimeoutMs = (opts?.timeout ?? CONSTANTS.DEFAULT_TIMEOUT_SECONDS) * 1000;
+  const defaultRetry: RetryConfig = opts?.retry ?? { delay: CONSTANTS.DEFAULT_RETRY_DELAY_SECONDS, retries: CONSTANTS.DEFAULT_RETRY_ATTEMPTS };
+  const contextMaxChars = opts?.contextMaxChars ?? CONSTANTS.DEFAULT_CONTEXT_MAX_CHARS;
+  const contextMaxToolResults = opts?.contextMaxToolResults ?? CONSTANTS.DEFAULT_CONTEXT_MAX_TOOL_RESULTS;
   const agentMcpAuth = opts?.mcpAuth || {};
   const telemetry = opts?.telemetry;
-  const defaultMaxToolIterations = typeof opts?.maxToolIterations === 'number' ? opts!.maxToolIterations! : 4;
+  const defaultMaxToolIterations = opts?.maxToolIterations ?? CONSTANTS.DEFAULT_MAX_TOOL_ITERATIONS;
   let isRunning = false;
   
   // Helper to apply agent-level auth to MCP handle
@@ -290,12 +301,8 @@ export function agent(opts?: AgentOptions): AgentBuilder {
           // Handle advanced pattern steps
           if ((raw as any).__parallel) {
             const hooks = (raw as any).__hooks;
-            try {
-              hooks?.pre?.();
-            } catch (e) {
-              console.warn('Pre-hook failed for parallel:', e);
-            }
-            
+            safeExecuteHook(hooks?.pre, 'Pre-parallel');
+
             const parallelResult = await executeParallel(
               (raw as any).__parallel,
               async (step: any) => {
@@ -307,125 +314,76 @@ export function agent(opts?: AgentOptions): AgentBuilder {
             out.push(parallelResult);
             contextHistory.push(parallelResult);
             log?.(parallelResult, out.length - 1);
-            
-            try {
-              hooks?.post?.();
-            } catch (e) {
-              console.warn('Post-hook failed for parallel:', e);
-            }
+
+            safeExecuteHook(hooks?.post, 'Post-parallel');
             continue;
           }
           
           if ((raw as any).__branch) {
             const { condition, branches } = (raw as any).__branch;
             const hooks = (raw as any).__hooks;
-            
-            try {
-              hooks?.pre?.();
-            } catch (e) {
-              console.warn('Pre-hook failed for branch:', e);
-            }
-            
+            safeExecuteHook(hooks?.pre, 'Pre-branch');
+
             const branchResults = await executeBranch(condition, branches, out, () => agent(opts));
             out.push(...branchResults);
             contextHistory.push(...branchResults);
             branchResults.forEach((r, i) => log?.(r, out.length - branchResults.length + i));
-            
-            try {
-              hooks?.post?.();
-            } catch (e) {
-              console.warn('Post-hook failed for branch:', e);
-            }
+
+            safeExecuteHook(hooks?.post, 'Post-branch');
             continue;
           }
           
           if ((raw as any).__switch) {
             const { selector, cases } = (raw as any).__switch;
             const hooks = (raw as any).__hooks;
-            
-            try {
-              hooks?.pre?.();
-            } catch (e) {
-              console.warn('Pre-hook failed for switch:', e);
-            }
-            
+            safeExecuteHook(hooks?.pre, 'Pre-switch');
+
             const switchResults = await executeSwitch(selector, cases, out, () => agent(opts));
             out.push(...switchResults);
             contextHistory.push(...switchResults);
             switchResults.forEach((r, i) => log?.(r, out.length - switchResults.length + i));
-            
-            try {
-              hooks?.post?.();
-            } catch (e) {
-              console.warn('Post-hook failed for switch:', e);
-            }
+
+            safeExecuteHook(hooks?.post, 'Post-switch');
             continue;
           }
           
           if ((raw as any).__while) {
             const { condition, body, opts: whileOpts } = (raw as any).__while;
-            
-            try {
-              whileOpts?.pre?.();
-            } catch (e) {
-              console.warn('Pre-hook failed for while:', e);
-            }
-            
+            safeExecuteHook(whileOpts?.pre, 'Pre-while');
+
             const whileResults = await executeWhile(condition, body, out, () => agent(opts), whileOpts);
             out.push(...whileResults);
             contextHistory.push(...whileResults);
             whileResults.forEach((r, i) => log?.(r, out.length - whileResults.length + i));
-            
-            try {
-              whileOpts?.post?.();
-            } catch (e) {
-              console.warn('Post-hook failed for while:', e);
-            }
+
+            safeExecuteHook(whileOpts?.post, 'Post-while');
             continue;
           }
           
           if ((raw as any).__forEach) {
             const { items, body } = (raw as any).__forEach;
             const hooks = (raw as any).__hooks;
-            
-            try {
-              hooks?.pre?.();
-            } catch (e) {
-              console.warn('Pre-hook failed for forEach:', e);
-            }
-            
+            safeExecuteHook(hooks?.pre, 'Pre-forEach');
+
             const forEachResults = await executeForEach(items, body, () => agent(opts));
             out.push(...forEachResults);
             contextHistory.push(...forEachResults);
             forEachResults.forEach((r, i) => log?.(r, out.length - forEachResults.length + i));
-            
-            try {
-              hooks?.post?.();
-            } catch (e) {
-              console.warn('Post-hook failed for forEach:', e);
-            }
+
+            safeExecuteHook(hooks?.post, 'Post-forEach');
             continue;
           }
           
           if ((raw as any).__retryUntil) {
             const { body, successCondition, opts: retryOpts } = (raw as any).__retryUntil;
-            
-            try {
-              retryOpts?.pre?.();
-            } catch (e) {
-              console.warn('Pre-hook failed for retryUntil:', e);
-            }
-            
+            safeExecuteHook(retryOpts?.pre, 'Pre-retryUntil');
+
             const retryResults = await executeRetryUntil(body, successCondition, () => agent(opts), retryOpts);
             out.push(...retryResults);
             contextHistory.push(...retryResults);
             retryResults.forEach((r, i) => log?.(r, out.length - retryResults.length + i));
-            
-            try {
-              retryOpts?.post?.();
-            } catch (e) {
-              console.warn('Post-hook failed for retryUntil:', e);
-            }
+
+            safeExecuteHook(retryOpts?.post, 'Post-retryUntil');
             continue;
           }
           

@@ -5,6 +5,7 @@ import { Client as MCPClient } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { MCPAuthConfig, MCPHandle } from "./types.js";
 import { getOAuthToken, executeWithAuth } from "./auth.js";
+import * as CONSTANTS from "../constants.js";
 
 type MCPPoolEntry = {
   client: MCPClient;
@@ -15,8 +16,8 @@ type MCPPoolEntry = {
 };
 
 const MCP_POOL = new Map<string, MCPPoolEntry>();
-let MCP_POOL_MAX = 16;
-let MCP_POOL_IDLE_MS = 30_000;
+let MCP_POOL_MAX = CONSTANTS.DEFAULT_MCP_POOL_MAX_SIZE;
+let MCP_POOL_IDLE_MS = CONSTANTS.DEFAULT_MCP_POOL_IDLE_MS;
 
 async function getPooledClient(url: string, auth?: MCPAuthConfig): Promise<MCPPoolEntry> {
   const poolKey = auth ? `${url}::auth` : url; // Separate pool entries for auth vs non-auth
@@ -106,7 +107,7 @@ async function cleanupIdlePool() {
 let POOL_SWEEPER: any = undefined;
 function ensurePoolSweeper() {
   if (!POOL_SWEEPER) {
-    POOL_SWEEPER = setInterval(() => { cleanupIdlePool(); }, 5_000);
+    POOL_SWEEPER = setInterval(() => { cleanupIdlePool(); }, CONSTANTS.DEFAULT_MCP_POOL_SWEEP_INTERVAL_MS);
     // In tests or short-lived processes we don't need to keep the event loop alive
     if (typeof POOL_SWEEPER.unref === 'function') POOL_SWEEPER.unref();
   }
