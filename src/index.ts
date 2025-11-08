@@ -976,8 +976,8 @@ export function agent(opts?: AgentOptions): AgentBuilder {
           // Handle advanced pattern steps (same as run() with hooks)
           if ((raw as any).__parallel) {
             const hooks = (raw as any).__hooks;
-            try { hooks?.pre?.(); } catch (e) { console.warn('Pre-hook failed for parallel:', e); }
-            
+            safeExecuteHook(hooks?.pre, 'Pre-parallel');
+
             const parallelResult = await executeParallel(
               (raw as any).__parallel,
               async (step: any) => {
@@ -990,16 +990,16 @@ export function agent(opts?: AgentOptions): AgentBuilder {
             contextHistory.push(parallelResult);
             log?.(parallelResult, out.length - 1);
             yield parallelResult;
-            
-            try { hooks?.post?.(); } catch (e) { console.warn('Post-hook failed for parallel:', e); }
+
+            safeExecuteHook(hooks?.post, 'Post-parallel');
             continue;
           }
           
           if ((raw as any).__branch) {
             const { condition, branches } = (raw as any).__branch;
             const hooks = (raw as any).__hooks;
-            try { hooks?.pre?.(); } catch (e) { console.warn('Pre-hook failed for branch:', e); }
-            
+            safeExecuteHook(hooks?.pre, 'Pre-branch');
+
             const branchResults = await executeBranch(condition, branches, out, () => agent(opts));
             out.push(...branchResults);
             contextHistory.push(...branchResults);
@@ -1007,16 +1007,16 @@ export function agent(opts?: AgentOptions): AgentBuilder {
               log?.(r, out.length - branchResults.length + branchResults.indexOf(r));
               yield r;
             }
-            
-            try { hooks?.post?.(); } catch (e) { console.warn('Post-hook failed for branch:', e); }
+
+            safeExecuteHook(hooks?.post, 'Post-branch');
             continue;
           }
           
           if ((raw as any).__switch) {
             const { selector, cases } = (raw as any).__switch;
             const hooks = (raw as any).__hooks;
-            try { hooks?.pre?.(); } catch (e) { console.warn('Pre-hook failed for switch:', e); }
-            
+            safeExecuteHook(hooks?.pre, 'Pre-switch');
+
             const switchResults = await executeSwitch(selector, cases, out, () => agent(opts));
             out.push(...switchResults);
             contextHistory.push(...switchResults);
@@ -1024,15 +1024,15 @@ export function agent(opts?: AgentOptions): AgentBuilder {
               log?.(r, out.length - switchResults.length + switchResults.indexOf(r));
               yield r;
             }
-            
-            try { hooks?.post?.(); } catch (e) { console.warn('Post-hook failed for switch:', e); }
+
+            safeExecuteHook(hooks?.post, 'Post-switch');
             continue;
           }
           
           if ((raw as any).__while) {
             const { condition, body, opts: whileOpts } = (raw as any).__while;
-            try { whileOpts?.pre?.(); } catch (e) { console.warn('Pre-hook failed for while:', e); }
-            
+            safeExecuteHook(whileOpts?.pre, 'Pre-while');
+
             const whileResults = await executeWhile(condition, body, out, () => agent(opts), whileOpts);
             out.push(...whileResults);
             contextHistory.push(...whileResults);
@@ -1040,16 +1040,16 @@ export function agent(opts?: AgentOptions): AgentBuilder {
               log?.(r, out.length - whileResults.length + whileResults.indexOf(r));
               yield r;
             }
-            
-            try { whileOpts?.post?.(); } catch (e) { console.warn('Post-hook failed for while:', e); }
+
+            safeExecuteHook(whileOpts?.post, 'Post-while');
             continue;
           }
           
           if ((raw as any).__forEach) {
             const { items, body } = (raw as any).__forEach;
             const hooks = (raw as any).__hooks;
-            try { hooks?.pre?.(); } catch (e) { console.warn('Pre-hook failed for forEach:', e); }
-            
+            safeExecuteHook(hooks?.pre, 'Pre-forEach');
+
             const forEachResults = await executeForEach(items, body, () => agent(opts));
             out.push(...forEachResults);
             contextHistory.push(...forEachResults);
@@ -1057,15 +1057,15 @@ export function agent(opts?: AgentOptions): AgentBuilder {
               log?.(r, out.length - forEachResults.length + forEachResults.indexOf(r));
               yield r;
             }
-            
-            try { hooks?.post?.(); } catch (e) { console.warn('Post-hook failed for forEach:', e); }
+
+            safeExecuteHook(hooks?.post, 'Post-forEach');
             continue;
           }
           
           if ((raw as any).__retryUntil) {
             const { body, successCondition, opts: retryOpts } = (raw as any).__retryUntil;
-            try { retryOpts?.pre?.(); } catch (e) { console.warn('Pre-hook failed for retryUntil:', e); }
-            
+            safeExecuteHook(retryOpts?.pre, 'Pre-retryUntil');
+
             const retryResults = await executeRetryUntil(body, successCondition, () => agent(opts), retryOpts);
             out.push(...retryResults);
             contextHistory.push(...retryResults);
@@ -1073,16 +1073,16 @@ export function agent(opts?: AgentOptions): AgentBuilder {
               log?.(r, out.length - retryResults.length + retryResults.indexOf(r));
               yield r;
             }
-            
-            try { retryOpts?.post?.(); } catch (e) { console.warn('Post-hook failed for retryUntil:', e); }
+
+            safeExecuteHook(retryOpts?.post, 'Post-retryUntil');
             continue;
           }
           
           if ((raw as any).__runAgent) {
             const { subAgent } = (raw as any).__runAgent;
             const hooks = (raw as any).__hooks;
-            try { hooks?.pre?.(); } catch (e) { console.warn('Pre-hook failed for runAgent:', e); }
-            
+            safeExecuteHook(hooks?.pre, 'Pre-runAgent');
+
             // Pass parent's context to subagent
             const subResults = await executeRunAgent(subAgent, out.length, planned.length, contextHistory);
             out.push(...subResults);
@@ -1091,8 +1091,8 @@ export function agent(opts?: AgentOptions): AgentBuilder {
               log?.(r, out.length - subResults.length + subResults.indexOf(r));
               yield r;
             }
-            
-            try { hooks?.post?.(); } catch (e) { console.warn('Post-hook failed for runAgent:', e); }
+
+            safeExecuteHook(hooks?.post, 'Post-runAgent');
             continue;
           }
           

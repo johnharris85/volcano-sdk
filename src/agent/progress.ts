@@ -1,6 +1,8 @@
 // src/agent/progress.ts
 // Progress display and rendering
 
+import * as CONSTANTS from "../constants.js";
+
 /**
  * Shared display helpers for consistent progress formatting.
  */
@@ -41,7 +43,7 @@ export function createProgressHandler(totalSteps: number, isSubAgent: boolean = 
   let waitInterval: NodeJS.Timeout | null = null;
 
   if (!isSubAgent) {
-    console.log('\n🌋 Running Volcano agent [volcano-sdk v1.0.1] • docs at https://volcano.dev');
+    console.log(`\n🌋 Running Volcano agent [volcano-sdk v${CONSTANTS.VOLCANO_SDK_VERSION}] • docs at https://volcano.dev`);
     console.log('━'.repeat(50));
   }
 
